@@ -32,10 +32,15 @@ st.set_page_config(
 )
 
 # ── Inject secrets as env vars so db.py/broker.py can find them ──────────────
-for key in ("SUPABASE_DB_URL", "SCHWAB_APP_KEY", "SCHWAB_APP_SECRET",
-            "DISCORD_WEBHOOK", "AUTH_PAGE_PASSWORD"):
-    if key in st.secrets and key not in os.environ:
-        os.environ[key] = st.secrets[key]
+try:
+    for key in ("SUPABASE_DB_URL", "SCHWAB_APP_KEY", "SCHWAB_APP_SECRET",
+                "DISCORD_WEBHOOK", "AUTH_PAGE_PASSWORD"):
+        if key not in os.environ:
+            val = st.secrets.get(key)
+            if val:
+                os.environ[key] = val
+except Exception:
+    pass
 
 import db
 from utils import load_config

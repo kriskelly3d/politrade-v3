@@ -1,0 +1,81 @@
+name: PoliTrade 3.0 — Executor
+
+# Runs every 30 minutes on weekdays during market hours.
+# Reads unprocessed disclosures from Supabase, runs the full
+# guard suite, and places orders (paper or live depending on config).
+# Separated from the scraper so order placement doesn't bottleneck
+# on slow HTML scraping.
+
+on:
+  schedule:
+    # Every 30 min, Mon-Fri, 12:00-21:00 UTC (08:00-17:00 ET)
+    - cron: "0,30 12-21 * * 1-5"
+  workflow_dispatch:
+
+jobs:
+  execute:
+    name: Process & Execute Orders
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        working-directory: v3
+        run: pip install -r requirements.txt
+
+      - name: Write Schwab token
+        working-directory: v3
+        env:
+          SCHWAB_TOKEN_JSON: ${{ secrets.SCHWAB_TOKEN_JSON }}
+        run: |
+          mkdir -p data
+          if [ -n "$SCHWAB_TOKEN_JSON" ]; then
+            echo "$SCHWAB_TOKEN_JSON" > data/schwab_token.json
+            echo "LIVE mode — token present"
+          else
+            echo "No SCHWAB_TOKEN_JSON secret — engine will use PAPER mode"
+          fi
+
+      - name: Set environment variables
+        run: |
+          echo "SUPABASE_DB_URL=${{ secrets.SUPABASE_DB_URL }}"     >> $GITHUB_ENV
+          echo "SCHWAB_APP_KEY=${{ secrets.SCHWAB_APP_KEY }}"       >> $GITHUB_ENV
+          echo "SCHWAB_APP_SECRET=${{ secrets.SCHWAB_APP_SECRET }}" >> $GITHUB_ENV
+          echo "DISCORD_WEBHOOK=${{ secrets.DISCORD_WEBHOOK }}"     >> $GITHUB_ENV
+
+      - name: Run engine (one cycle — reads from DB, places orders)
+        working-directory: v3
+        run: python engine.py
+
+      - name: Print run summary
+        working-directory: v3
+        run: |
+          python - <<'EOF'
+          import db
+          db.init_db()
+          run = db.get_last_run()
+          if run:
+              print(f"Last run: {run['run_at']}")
+              print(f"  fetched={run['disclosures_fetched']} new={run['disclosures_new']}")
+              print(f"  placed={run['orders_placed']} blocked={run['orders_blocked']}")
+              print(f"  duration={run['duration_ms']}ms")
+              if run.get('error_message'):
+                  print(f"  ERROR: {run['error_message']}")
+          else:
+              print("No run record found.")
+          EOF

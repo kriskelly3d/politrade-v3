@@ -1,0 +1,42 @@
+{
+  "engine": {
+    "poll_interval_minutes": 30,
+    "days_back": 7,
+    "default_mode": "paper",
+    "max_daily_orders": 10,
+    "min_buying_power_usd": 2000,
+    "mirror_sells": true,
+    "sell_full_on_full_sale": true,
+    "partial_sell_pct": 0.50,
+    "rebalance_check_seconds": 60,
+    "stale_position_days": 90
+  },
+  "guards": {
+    "slippage_pct": 10.0,
+    "slippage_v2": {
+      "enabled": true,
+      "max_spread_pct": 0.5,
+      "min_volume": 100000,
+      "soft_block_spread_pct": 1.0
+    }
+  },
+  "pilots": {
+    "Nancy Pelosi":     { "enabled": true, "allocation_pct": 0.05, "order_type": "MARKET", "priority": 1, "mode": "paper" },
+    "Dan Crenshaw":     { "enabled": true, "allocation_pct": 0.03, "order_type": "MARKET", "priority": 2, "mode": "paper" },
+    "Tommy Tuberville": { "enabled": true, "allocation_pct": 0.03, "order_type": "LIMIT",  "priority": 3, "mode": "paper", "limit_offset_pct": 0.005 },
+    "John Boozman":     { "enabled": true, "allocation_pct": 0.03, "order_type": "MARKET", "priority": 4, "mode": "paper" }
+  },
+  "tracking": {
+    "politicians": [],
+    "chambers": ["house", "senate"],
+    "min_amount_usd": 1000,
+    "transaction_types": ["purchase", "sale_full", "sale_partial", "sale", "buy"]
+  },
+  "schwab": {
+    "redirect_uri": "https://127.0.0.1",
+    "token_path": "data/schwab_token.json",
+    "access_token_ttl_seconds": 1800,
+    "refresh_token_ttl_seconds": 604800,
+    "refresh_token_warn_days": 2
+  }
+}
